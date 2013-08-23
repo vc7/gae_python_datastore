@@ -6,10 +6,11 @@ from google.appengine.ext import ndb
 from google.appengine.api import users
 
 class Greeting(ndb.Model):
+	"""Models an individual guestbook entry with author, content, and date."""
 	author = ndb.UserProperty()
 	content = ndb.StringProperty()
-	data = ndb.DateTimeProperty(quto_now_add=True)
-
+	date = ndb.DateTimeProperty(auto_now_add=True)
+	
 	@classmethod
 	def query_book(cls, ancestor_key):
 		return cls.query(ancestor=ancestor_key).order(-cls.date)
@@ -17,7 +18,7 @@ class Greeting(ndb.Model):
 class MainPage(webapp2.RequestHandler):
 	def get(self):
 		self.response.out.write('<html><body>')
-		questbook_name = self.request.get('guestbook_name')
+		guestbook_name = self.request.get('guestbook_name')
 
 		ancestor_key = ndb.Key("Book",guestbook_name or "*notitle*")
 		greetings = Greeting.query_book(ancestor_key).fetch(20)
@@ -34,8 +35,7 @@ class MainPage(webapp2.RequestHandler):
 				<form action "/sign" method="post">
 					<input type="hidden" value="%s" name="guestbook_name">
 					<div>
-						<textarea name="content" row="3" col="60">
-						</textarea>
+						<textarea name="content" row="3" col="60"></textarea>
 					</div>
 					<div>
 						<input type="submit" value="Sign Guestbook">
@@ -48,16 +48,16 @@ class MainPage(webapp2.RequestHandler):
 				</body>
 				</html>""" % (cgi.escape(guestbook_name), cgi.escape(guestbook_name)))
 
-class GuestBook(webapp2.RequestHandler):
-	def post(self)
-	guestbook_name = self.request.get('guestbook_name')
-	greeting = Greeting(parent=ndb.Key("Book", guestbook_name or "*notitle*"),
-			content = self.request.get('content'))
+class Guestbook(webapp2.RequestHandler):
+	def post(self):
+		guestbook_name = self.request.get('guestbook_name')
+		greeting = Greeting(
+				parent=ndb.Key("Book", guestbook_name or "*notitle*"),
+				content = self.request.get('content'))
+		if users.get_current_user():
+			greeting.author = users.get_current_user()
 
-	if users.get_current_user():
-		greeting.author = users.get_current_user()
-	greeting.put()
-	self.redirect('/?' + urllib.urlencode({'guestbook_name':guestbook_name}))
-
+		# greeting.put()
+		self.redirect('/?' + urllib.urlencode({'guestbook_name':guestbook_name}))
 
 app = webapp2.WSGIApplication([('/', MainPage),('/sign', Guestbook)])
